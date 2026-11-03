@@ -1,0 +1,19 @@
+{
+  "name": "arrow-escape-puzzle-game",
+  "version": "1.0.0",
+  "description": "A complete, modern, responsive Arrow Escape Puzzle Game built with HTML5, CSS3, JavaScript, Tailwind CSS, and Node.js backend.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "generate-levels": "node generate-levels.js"
+  },
+  "keywords": [
+    "arrow-puzzle",
+    "escape-game",
+    "puzzle-game",
+    "web-audio",
+    "adsense-ready"
+  ],
+  "author": "Antigravity",
+  "license": "MIT"
+}

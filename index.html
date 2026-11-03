@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Arrow Escape - Modern Puzzle Game</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            bg: '#090d16',
+                            card: '#0f172a',
+                            cyan: '#06b6d4',
+                            violet: '#8b5cf6',
+                            emerald: '#10b981',
+                            amber: '#f59e0b',
+                            rose: '#f43f5e'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Custom Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Google AdSense Placeholder Script Tag (configurable in script.js) -->
+    <!-- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script> -->
+</head>
+<body class="bg-mesh-gradient min-h-screen text-slate-100 flex flex-col justify-between select-none relative overflow-x-hidden">
+
+    <!-- Canvas for Confetti celebration on victory -->
+    <canvas id="confetti-canvas"></canvas>
+
+    <!-- Floating Toast Notification -->
+    <div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-[110] flex flex-col gap-2 pointer-events-none transition-all duration-300"></div>
+
+    <!-- =========================================================================
+         SCREEN 0: ANIMATED LOADING SCREEN
+         ========================================================================= -->
+    <div id="loading-screen" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-slate-950 px-6 transition-opacity duration-500">
+        <div class="relative flex items-center justify-center mb-8">
+            <!-- Pulsing outer circles -->
+            <div class="w-32 h-32 rounded-full border border-cyan-500/20 animate-ping absolute"></div>
+            <div class="w-24 h-24 rounded-full border-2 border-dashed border-cyan-400/40 animate-spin absolute" style="animation-duration: 8s;"></div>
+            <div class="w-20 h-20 rounded-2xl bg-gradient-to-tr from-cyan-500 via-indigo-600 to-rose-500 p-0.5 shadow-2xl shadow-cyan-500/30 flex items-center justify-center transform rotate-12 transition-transform">
+                <div class="w-full h-full bg-slate-900 rounded-2xl flex items-center justify-center">
+                    <svg class="w-10 h-10 text-cyan-400 -rotate-12 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <h1 class="text-3xl sm:text-4xl font-black tracking-wider uppercase title-gradient mb-2">Arrow Escape</h1>
+        <p class="text-sm font-medium text-slate-400 tracking-wide mb-8">Strategic Pathfinding Puzzle</p>
+
+        <!-- Loading Progress Bar -->
+        <div class="w-64 max-w-full bg-slate-900 border border-slate-800 rounded-full h-2.5 overflow-hidden p-0.5 shadow-inner">
+            <div id="loading-bar" class="h-full bg-gradient-to-r from-cyan-400 via-indigo-500 to-rose-500 rounded-full w-1/12 transition-all duration-300"></div>
+        </div>
+        <p id="loading-status" class="text-xs font-mono text-cyan-400/80 mt-3 flex items-center gap-2">
+            <span class="inline-block w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+            Connecting to server...
+        </p>
+    </div>
+
+    <!-- =========================================================================
+         SCREEN 1: HOME SCREEN
+         ========================================================================= -->
+    <div id="home-screen" class="screen-view min-h-screen flex flex-col justify-between p-4 sm:p-6 max-w-xl mx-auto w-full transition-opacity duration-300">
+        <!-- Top Navigation / Status Header -->
+        <header class="flex items-center justify-between py-2">
+            <!-- Brand Mark -->
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-md shadow-cyan-500/20">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-base font-extrabold tracking-tight text-white leading-tight">Arrow Escape</h2>
+                    <div id="connection-status-pill" class="flex items-center gap-1.5 text-[11px] font-mono text-emerald-400">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span>Online & Synced</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Header Quick Controls -->
+            <div class="flex items-center gap-2">
+                <!-- Sound Toggle -->
+                <button id="btn-quick-sound" class="w-9 h-9 rounded-xl glass-card flex items-center justify-center text-slate-300 hover:text-cyan-400 hover:border-cyan-500/40 transition-colors" title="Toggle Sound FX">
+                    <svg id="icon-sound-on" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M11 5L6 9H2v6h4l5 4V5z"/>
+                    </svg>
+                    <svg id="icon-sound-off" class="w-4 h-4 hidden text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>
+                    </svg>
+                </button>
+
+                <!-- Music Toggle -->
+                <button id="btn-quick-music" class="w-9 h-9 rounded-xl glass-card flex items-center justify-center text-slate-300 hover:text-cyan-400 hover:border-cyan-500/40 transition-colors" title="Toggle Ambient Music">
+                    <svg id="icon-music-on" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                    </svg>
+                    <svg id="icon-music-off" class="w-4 h-4 hidden text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3l18 18"/>
+                    </svg>
+                </button>
+
+                <!-- Settings Button -->
+                <button id="btn-home-settings" class="w-9 h-9 rounded-xl glass-card flex items-center justify-center text-slate-300 hover:text-cyan-400 hover:border-cyan-500/40 transition-colors" title="Settings">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Home Banner Advertisement Placement (Google AdSense Slot 1) -->
+        <div class="my-2">
+            <div id="ad-banner-home" class="ad-slot-wrapper w-full py-2.5 px-3 min-h-[50px]">
+                <span class="ad-badge">ADVERTISEMENT</span>
+                <div class="flex items-center justify-between w-full text-xs text-slate-400">
+                    <div class="flex items-center gap-2">
+                        <span class="w-6 h-6 rounded bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-[10px]">AD</span>
+                        <span>Google AdSense Slot: Home Screen Banner</span>
+                    </div>
+                    <span class="text-[10px] text-cyan-400 font-mono">320x50 / Responsive</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center Hero Card & Game Navigation -->
+        <main class="my-auto py-4 flex flex-col items-center text-center">
+            <!-- Animated Hero Visual Preview -->
+            <div class="relative mb-6">
+                <div class="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl bg-gradient-to-tr from-cyan-500/20 via-indigo-500/10 to-rose-500/20 border border-white/10 flex items-center justify-center p-3 shadow-2xl relative">
+                    <!-- Mini interactive arrows floating around -->
+                    <div class="grid grid-cols-2 gap-2 w-full h-full">
+                        <div class="rounded-xl bg-cyan-600/40 border border-cyan-400 flex items-center justify-center transform -translate-y-1 animate-bounce" style="animation-duration: 2s;">
+                            <svg class="w-6 h-6 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+                        </div>
+                        <div class="rounded-xl bg-rose-600/40 border border-rose-400 flex items-center justify-center transform translate-x-1 animate-pulse" style="animation-duration: 2.5s;">
+                            <svg class="w-6 h-6 text-rose-300 rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+                        </div>
+                        <div class="rounded-xl bg-emerald-600/40 border border-emerald-400 flex items-center justify-center transform -translate-x-1 animate-pulse" style="animation-duration: 2.2s;">
+                            <svg class="w-6 h-6 text-emerald-300 -rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+                        </div>
+                        <div class="rounded-xl bg-amber-600/40 border border-amber-400 flex items-center justify-center transform translate-y-1 animate-bounce" style="animation-duration: 2.4s;">
+                            <svg class="w-6 h-6 text-amber-300 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Title & Slogan -->
+            <h1 class="text-4xl sm:text-5xl font-black tracking-tight uppercase title-gradient mb-2 drop-shadow-md">
+                Arrow Escape
+            </h1>
+            <p class="text-slate-400 text-sm sm:text-base max-w-sm mb-6 leading-relaxed">
+                Clear the grid by finding the escape path for each arrow. One move unlocks the next!
+            </p>
+
+            <!-- Player Progress Pill -->
+            <div id="home-progress-badge" class="glass-card px-4 py-2 rounded-2xl mb-6 flex items-center gap-4 text-xs font-medium border border-white/10">
+                <div class="flex items-center gap-1.5 text-amber-400 font-mono">
+                    <span class="text-sm">⭐</span>
+                    <span id="home-stars-count">0 / 60</span>
+                </div>
+                <div class="w-px h-4 bg-slate-700"></div>
+                <div class="text-slate-300">
+                    Highest: <span id="home-highest-level" class="text-cyan-400 font-bold">Level 1</span>
+                </div>
+                <div class="w-px h-4 bg-slate-700"></div>
+                <div class="flex items-center gap-1 text-slate-300">
+                    <span>💡</span>
+                    <span id="home-hints-count" class="font-mono text-cyan-400">3 Hints</span>
+                </div>
+            </div>
+
+            <!-- Main Button Action Stack -->
+            <div class="w-full max-w-xs flex flex-col gap-3">
+                <!-- Play / Continue Button -->
+                <button id="btn-play-game" class="btn-glow w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-cyan-500 via-indigo-600 to-rose-500 text-white font-black text-lg tracking-wider uppercase shadow-xl shadow-cyan-500/25 flex items-center justify-center gap-3">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z"/>
+                    </svg>
+                    <span>PLAY GAME</span>
+                </button>
+
+                <!-- Continue Last Played Level Button (dynamic label) -->
+                <button id="btn-continue-game" class="btn-glow w-full py-3.5 px-6 rounded-2xl glass-card text-cyan-300 font-bold text-base tracking-wide flex items-center justify-center gap-2 hover:border-cyan-500/50">
+                    <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                    </svg>
+                    <span id="label-continue-game">Continue Level 1</span>
+                </button>
+
+                <!-- Level Select Button -->
+                <button id="btn-level-select" class="btn-glow w-full py-3.5 px-6 rounded-2xl glass-card text-slate-200 font-bold text-base tracking-wide flex items-center justify-center gap-2 hover:border-slate-500/50">
+                    <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                    </svg>
+                    <span>SELECT LEVEL</span>
+                </button>
+
+                <!-- How to Play Button -->
+                <button id="btn-how-to-play" class="btn-glow w-full py-3 px-6 rounded-2xl glass-card text-slate-300 font-semibold text-sm tracking-wide flex items-center justify-center gap-2 hover:border-slate-500/50">
+                    <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span>HOW TO PLAY</span>
+                </button>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="text-center py-2 text-xs text-slate-500 flex items-center justify-center gap-2">
+            <span>Arrow Escape v1.0</span>
+            <span>•</span>
+            <span class="text-cyan-400/80">Online Synced</span>
+        </footer>
+    </div>
+
+    <!-- =========================================================================
+         SCREEN 2: LEVEL SELECTION SCREEN
+         ========================================================================= -->
+    <div id="levels-screen" class="screen-view hidden min-h-screen flex flex-col justify-between p-4 sm:p-6 max-w-2xl mx-auto w-full transition-opacity duration-300">
+        <!-- Top Navigation -->
+        <header class="flex items-center justify-between pb-4 border-b border-slate-800">
+            <button id="btn-levels-back" class="btn-glow px-3.5 py-2 rounded-xl glass-card text-slate-300 hover:text-white flex items-center gap-1.5 text-sm font-semibold">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                <span>Back</span>
+            </button>
+
+            <div class="text-center">
+                <h2 class="text-lg font-extrabold uppercase tracking-wider text-white">Select Level</h2>
+                <p class="text-xs text-slate-400">20 Handcrafted Challenges</p>
+            </div>
+
+            <!-- Stars Total Display -->
+            <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-card border border-amber-500/30 text-amber-400 text-xs font-mono font-bold">
+                <span>⭐</span>
+                <span id="levels-screen-stars">0 / 60</span>
+            </div>
+        </header>
+
+        <!-- Levels Grid Container -->
+        <main class="my-4 flex-1 overflow-y-auto max-h-[70vh] py-2 pr-1">
+            <div id="levels-grid" class="level-grid">
+                <!-- Dynamically generated level cards by script.js -->
+            </div>
+        </main>
+
+        <!-- Banner Ad on Level Select Screen (Google AdSense Slot 2) -->
+        <div class="mt-2">
+            <div id="ad-banner-levels" class="ad-slot-wrapper w-full py-2.5 px-3 min-h-[50px]">
+                <span class="ad-badge">ADVERTISEMENT</span>
+                <div class="flex items-center justify-between w-full text-xs text-slate-400">
+                    <div class="flex items-center gap-2">
+                        <span class="w-6 h-6 rounded bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-[10px]">AD</span>
+                        <span>Google AdSense Slot: Level Selection Banner</span>
+                    </div>
+                    <span class="text-[10px] text-indigo-400 font-mono">Responsive</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================================
+         SCREEN 3: GAMEPLAY SCREEN
+         ========================================================================= -->
+    <div id="gameplay-screen" class="screen-view hidden min-h-screen flex flex-col justify-between p-3 sm:p-5 max-w-xl mx-auto w-full transition-opacity duration-300">
+        <!-- Top HUD Header -->
+        <header class="flex items-center justify-between gap-2 pb-2">
+            <!-- Left: Back & Level title -->
+            <div class="flex items-center gap-2">
+                <button id="btn-game-back" class="w-9 h-9 rounded-xl glass-card flex items-center justify-center text-slate-300 hover:text-white" title="Level Select">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                </button>
+                <div>
+                    <h3 id="game-level-title" class="text-sm font-extrabold text-white leading-tight">Level 1</h3>
+                    <p id="game-level-subtitle" class="text-[11px] text-cyan-400 font-medium">First Steps</p>
+                </div>
+            </div>
+
+            <!-- Middle: Remaining Arrows Badge -->
+            <div class="glass-card px-3 py-1.5 rounded-xl flex items-center gap-2 border border-cyan-500/30">
+                <div class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></div>
+                <div class="text-xs">
+                    <span class="text-slate-400 font-medium">Left:</span>
+                    <span id="game-remaining-arrows" class="font-mono font-black text-cyan-300 text-sm ml-1">0</span>
+                </div>
+            </div>
+
+            <!-- Right: Timer, Score, Pause -->
+            <div class="flex items-center gap-2">
+                <!-- Timer Display -->
+                <div class="glass-card px-2.5 py-1.5 rounded-xl flex items-center gap-1.5 text-xs font-mono">
+                    <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span id="game-timer" class="font-bold text-slate-200">00:00</span>
+                </div>
+
+                <!-- Pause Button -->
+                <button id="btn-game-pause" class="w-9 h-9 rounded-xl glass-card flex items-center justify-center text-slate-300 hover:text-amber-400" title="Pause Game">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Secondary Sub-HUD: Score & Combo & In-Game Action Buttons -->
+        <div class="flex items-center justify-between py-1 px-1 text-xs">
+            <div class="flex items-center gap-3">
+                <!-- Score -->
+                <div class="text-slate-300">
+                    Score: <span id="game-score" class="font-mono font-bold text-emerald-400 text-sm">0</span>
+                </div>
+                <!-- Combo Streak Badge -->
+                <div id="game-combo-badge" class="hidden px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-rose-500 text-white font-black text-[10px] tracking-wider animate-pulse">
+                    COMBO x<span id="game-combo-multiplier">2</span>
+                </div>
+            </div>
+
+            <!-- In-game Actions: Restart & Hint -->
+            <div class="flex items-center gap-2">
+                <!-- Restart Button -->
+                <button id="btn-game-restart" class="px-2.5 py-1 rounded-lg glass-card text-[11px] font-semibold text-slate-300 hover:text-white flex items-center gap-1 hover:border-slate-500">
+                    <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    <span>Restart</span>
+                </button>
+
+                <!-- Hint Button -->
+                <button id="btn-game-hint" class="px-2.5 py-1 rounded-lg glass-card text-[11px] font-semibold text-amber-300 hover:text-amber-200 border-amber-500/30 flex items-center gap-1">
+                    <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                    </svg>
+                    <span>Hint</span>
+                    <span id="game-hint-badge" class="ml-0.5 px-1 py-0.2 rounded-full bg-amber-500/20 text-amber-300 font-mono text-[10px]">3</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Center: Interactive Puzzle Grid Board Container -->
+        <main class="my-auto py-2 flex flex-col items-center justify-center relative">
+            <div id="board-outer-wrapper" class="puzzle-board-container w-full flex items-center justify-center relative">
+                <!-- Dynamic Puzzle Grid is rendered here -->
+                <div id="puzzle-board" class="puzzle-board"></div>
+            </div>
+        </main>
+
+        <!-- Bottom Dedicated Banner Ad Placement (Google AdSense Slot 3) -->
+        <div class="mt-2">
+            <div id="ad-banner-gameplay" class="ad-slot-wrapper w-full py-2 px-3 min-h-[50px]">
+                <span class="ad-badge">ADVERTISEMENT</span>
+                <div class="flex items-center justify-between w-full text-xs text-slate-400">
+                    <div class="flex items-center gap-2">
+                        <span class="w-5 h-5 rounded bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-[9px]">AD</span>
+                        <span class="truncate max-w-[200px] sm:max-w-none">Google AdSense Slot: Gameplay Banner</span>
+                    </div>
+                    <span class="text-[9px] text-emerald-400 font-mono shrink-0">Sticky Footer</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================================
+         MODALS & OVERLAYS
+         ========================================================================= -->
+
+    <!-- 1. PAUSE MODAL -->
+    <div id="modal-pause" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 transition-all duration-300">
+        <div class="glass-modal w-full max-w-sm rounded-3xl p-6 text-center shadow-2xl relative">
+            <div class="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center mx-auto mb-4">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <h3 class="text-2xl font-black uppercase text-white mb-1">Game Paused</h3>
+            <p id="pause-level-info" class="text-xs text-slate-400 mb-6">Level 1: First Steps</p>
+
+            <div class="flex flex-col gap-3">
+                <button id="btn-pause-resume" class="btn-glow w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-white font-bold tracking-wide uppercase shadow-lg shadow-cyan-500/20">
+                    Resume Game
+                </button>
+                <button id="btn-pause-restart" class="w-full py-3 rounded-xl glass-card text-slate-200 font-semibold hover:border-slate-500 transition-colors">
+                    Restart Level
+                </button>
+                <button id="btn-pause-levels" class="w-full py-3 rounded-xl glass-card text-slate-200 font-semibold hover:border-slate-500 transition-colors">
+                    Level Selection
+                </button>
+                <button id="btn-pause-home" class="w-full py-3 rounded-xl glass-card text-slate-400 font-semibold hover:text-white transition-colors">
+                    Main Menu
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. VICTORY / LEVEL CLEAR MODAL -->
+    <div id="modal-victory" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 backdrop-blur-md p-4 transition-all duration-300">
+        <div class="glass-modal w-full max-w-sm rounded-3xl p-6 text-center shadow-2xl relative border border-cyan-500/30">
+            <!-- Animated Crown / Trophy Icon -->
+            <div class="w-16 h-16 rounded-3xl bg-gradient-to-tr from-amber-400 to-rose-500 p-0.5 mx-auto mb-4 shadow-xl shadow-amber-500/20 flex items-center justify-center">
+                <div class="w-full h-full bg-slate-950 rounded-3xl flex items-center justify-center">
+                    <span class="text-3xl">🏆</span>
+                </div>
+            </div>
+
+            <h3 class="text-2xl font-black uppercase tracking-wider text-white mb-1">Level Cleared!</h3>
+            <p id="victory-level-subtitle" class="text-xs text-cyan-400 font-medium mb-4">Masterful Escape!</p>
+
+            <!-- 3 Stars Rating Display -->
+            <div class="flex items-center justify-center gap-3 mb-6">
+                <span id="star-1" class="text-3xl opacity-20 transition-all duration-500">⭐</span>
+                <span id="star-2" class="text-4xl opacity-20 -translate-y-1 transition-all duration-500">⭐</span>
+                <span id="star-3" class="text-3xl opacity-20 transition-all duration-500">⭐</span>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-2 gap-2 mb-6 text-left">
+                <div class="glass-card p-3 rounded-xl border border-white/5">
+                    <p class="text-[10px] text-slate-400 uppercase font-semibold">Time</p>
+                    <p id="victory-stat-time" class="text-base font-mono font-bold text-white">00:15</p>
+                </div>
+                <div class="glass-card p-3 rounded-xl border border-white/5">
+                    <p class="text-[10px] text-slate-400 uppercase font-semibold">Par Time</p>
+                    <p id="victory-stat-par" class="text-base font-mono font-bold text-slate-300">00:30</p>
+                </div>
+                <div class="glass-card p-3 rounded-xl border border-white/5">
+                    <p class="text-[10px] text-slate-400 uppercase font-semibold">Moves</p>
+                    <p id="victory-stat-moves" class="text-base font-mono font-bold text-cyan-400">4 / 4</p>
+                </div>
+                <div class="glass-card p-3 rounded-xl border border-white/5">
+                    <p class="text-[10px] text-slate-400 uppercase font-semibold">Total Score</p>
+                    <p id="victory-stat-score" class="text-base font-mono font-bold text-amber-400">1,250</p>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex flex-col gap-2.5">
+                <button id="btn-victory-next" class="btn-glow w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-600 to-rose-500 text-white font-black text-base uppercase tracking-wider shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-2">
+                    <span>NEXT LEVEL</span>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                    </svg>
+                </button>
+                <div class="grid grid-cols-2 gap-2">
+                    <button id="btn-victory-replay" class="py-2.5 rounded-xl glass-card text-slate-300 font-semibold text-xs hover:text-white flex items-center justify-center gap-1">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        <span>Replay</span>
+                    </button>
+                    <button id="btn-victory-levels" class="py-2.5 rounded-xl glass-card text-slate-300 font-semibold text-xs hover:text-white flex items-center justify-center gap-1">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                        <span>Levels</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. HOW TO PLAY MODAL -->
+    <div id="modal-how-to-play" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 backdrop-blur-md p-4 transition-all duration-300">
+        <div class="glass-modal w-full max-w-md rounded-3xl p-6 text-left shadow-2xl relative border border-white/10 max-h-[85vh] overflow-y-auto">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">🎯</span>
+                    <h3 class="text-xl font-black uppercase text-white">How To Play</h3>
+                </div>
+                <button id="btn-close-how-to-play" class="w-8 h-8 rounded-lg glass-card flex items-center justify-center text-slate-400 hover:text-white">
+                    ✕
+                </button>
+            </div>
+
+            <div class="space-y-4 text-sm text-slate-300">
+                <div class="flex gap-3 items-start">
+                    <div class="w-7 h-7 rounded-lg bg-cyan-500/20 text-cyan-400 font-bold flex items-center justify-center shrink-0">1</div>
+                    <div>
+                        <h4 class="font-bold text-white mb-0.5">Arrows Fly in Their Pointed Direction</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed">Each tile contains an arrow pointing Up, Down, Left, or Right. Tapping it orders the arrow to fly off the board in that exact direction.</p>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 items-start">
+                    <div class="w-7 h-7 rounded-lg bg-rose-500/20 text-rose-400 font-bold flex items-center justify-center shrink-0">2</div>
+                    <div>
+                        <h4 class="font-bold text-white mb-0.5">The Path Must Be Clear!</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed">An arrow CANNOT escape if another arrow stands anywhere along its flight path. If blocked, it will bounce back and warn you of the obstacle.</p>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 items-start">
+                    <div class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 font-bold flex items-center justify-center shrink-0">3</div>
+                    <div>
+                        <h4 class="font-bold text-white mb-0.5">Solve from the Outside In</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed">Inspect outer perimeter arrows first. Once they fly away, they create clear escape corridors for the trapped inner arrows.</p>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 items-start">
+                    <div class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center shrink-0">4</div>
+                    <div>
+                        <h4 class="font-bold text-white mb-0.5">Earn Up to 3 Stars</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed">Escape with zero blocked mistakes and beat the Par Time to earn all 3 Stars on every level!</p>
+                    </div>
+                </div>
+            </div>
+
+            <button id="btn-how-to-play-gotit" class="btn-glow mt-6 w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-white font-bold tracking-wide uppercase text-sm">
+                Got It, Let's Play!
+            </button>
+        </div>
+    </div>
+
+    <!-- 4. SETTINGS MODAL -->
+    <div id="modal-settings" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 backdrop-blur-md p-4 transition-all duration-300">
+        <div class="glass-modal w-full max-w-sm rounded-3xl p-6 text-left shadow-2xl relative border border-white/10">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-5">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    <h3 class="text-xl font-black uppercase text-white">Settings</h3>
+                </div>
+                <button id="btn-close-settings" class="w-8 h-8 rounded-lg glass-card flex items-center justify-center text-slate-400 hover:text-white">
+                    ✕
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <!-- Sound SFX -->
+                <div class="flex items-center justify-between p-3 rounded-xl glass-card">
+                    <div>
+                        <p class="font-bold text-white text-sm">Sound Effects</p>
+                        <p class="text-xs text-slate-400">Escapes, bumps & chimes</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="setting-toggle-sound" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-500"></div>
+                    </label>
+                </div>
+
+                <!-- Music -->
+                <div class="flex items-center justify-between p-3 rounded-xl glass-card">
+                    <div>
+                        <p class="font-bold text-white text-sm">Ambient Music</p>
+                        <p class="text-xs text-slate-400">Atmospheric background tunes</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="setting-toggle-music" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500"></div>
+                    </label>
+                </div>
+
+                <!-- Vibration / Haptics -->
+                <div class="flex items-center justify-between p-3 rounded-xl glass-card">
+                    <div>
+                        <p class="font-bold text-white text-sm">Haptic Feedback</p>
+                        <p class="text-xs text-slate-400">Tactile vibration on mobile</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="setting-toggle-haptics" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                    </label>
+                </div>
+
+                <!-- Server Sync Status -->
+                <div class="p-3 rounded-xl glass-card flex items-center justify-between">
+                    <div>
+                        <p class="font-bold text-white text-xs">Cloud Sync</p>
+                        <p id="settings-sync-status" class="text-[11px] text-emerald-400 font-mono">Synchronized</p>
+                    </div>
+                    <button id="btn-sync-now" class="px-2.5 py-1 rounded-lg bg-slate-800 text-xs font-semibold text-cyan-300 hover:bg-slate-700">
+                        Sync Now
+                    </button>
+                </div>
+
+                <!-- Reset Progress Button -->
+                <button id="btn-reset-progress" class="w-full py-2.5 rounded-xl border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 text-xs font-bold uppercase tracking-wider transition-colors">
+                    Reset All Game Progress
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. CONNECTION LOST FULL-SCREEN OVERLAY -->
+    <div id="screen-connection-lost" class="fixed inset-0 z-[120] hidden flex flex-col items-center justify-center bg-slate-950/95 backdrop-blur-lg px-6 text-center transition-all duration-300">
+        <div class="relative flex items-center justify-center mb-6">
+            <!-- Pulsing radar wave -->
+            <div class="w-36 h-36 rounded-full border-2 border-rose-500/20 radar-circle absolute"></div>
+            <div class="w-24 h-24 rounded-full border border-rose-500/40 radar-circle absolute" style="animation-delay: 0.5s;"></div>
+            <div class="w-20 h-20 rounded-2xl bg-rose-500/20 border border-rose-500/50 flex items-center justify-center text-rose-400 shadow-2xl shadow-rose-500/30">
+                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 4.243a9 9 0 01-12.728 0m0 0l2.829-2.829m-2.829 2.829L3 21M8.464 15.536a5 5 0 010-7.072m0 0l2.829 2.829M12 12v.01"/>
+                </svg>
+            </div>
+        </div>
+
+        <h2 class="text-2xl sm:text-3xl font-black uppercase text-white mb-2 tracking-wide">Internet Connection Lost</h2>
+        <p class="text-slate-400 text-sm max-w-sm mb-6 leading-relaxed">
+            Arrow Escape requires an active internet connection to synchronize levels and secure gameplay. Please verify your connection.
+        </p>
+
+        <div class="flex flex-col gap-3 w-full max-w-xs">
+            <button id="btn-retry-connection" class="btn-glow w-full py-3.5 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 text-white font-bold tracking-wider uppercase shadow-lg shadow-rose-500/25 flex items-center justify-center gap-2">
+                <svg id="icon-retry-spin" class="w-4 h-4 hidden animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+                <span id="label-retry-connection">Retry Connection</span>
+            </button>
+        </div>
+        <p class="text-xs text-slate-500 mt-4 font-mono">Auto-detecting network status...</p>
+    </div>
+
+    <!-- 6. INTERSTITIAL ADVERTISEMENT MODAL (Google AdSense Interstitial) -->
+    <div id="modal-ad-interstitial" class="fixed inset-0 z-[130] hidden flex items-center justify-center bg-black/90 backdrop-blur-md p-4 transition-all duration-300">
+        <div class="glass-modal w-full max-w-lg rounded-3xl p-5 text-center shadow-2xl relative border border-slate-700">
+            <!-- Header with Close & Ad badge -->
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] uppercase font-bold tracking-widest bg-slate-800 text-slate-300 px-2 py-0.5 rounded">Ad by Google</span>
+                    <span class="text-xs text-slate-500 font-mono">AdSense Interstitial</span>
+                </div>
+                <!-- Countdown or Close Button -->
+                <button id="btn-close-interstitial" class="px-3 py-1 rounded-lg bg-slate-800 text-slate-300 hover:text-white text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span id="interstitial-countdown">Close in 5s</span>
+                </button>
+            </div>
+
+            <!-- Interstitial Creative Body -->
+            <div class="rounded-2xl bg-gradient-to-br from-indigo-950 via-slate-900 to-slate-950 p-6 border border-white/5 my-2 flex flex-col items-center">
+                <div class="w-16 h-16 rounded-2xl bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 flex items-center justify-center text-3xl mb-3 shadow-lg">
+                    ✨
+                </div>
+                <h4 class="text-lg font-black text-white mb-1">Discover Next-Gen Gaming</h4>
+                <p class="text-xs text-slate-400 max-w-xs mb-4">Support Arrow Escape by engaging with verified sponsors. Powered by Google AdSense & Ad Manager.</p>
+                <div class="w-full py-2.5 px-4 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-semibold">
+                    Ad Unit Slot ID: 4567890123 (Preview Mode)
+                </div>
+            </div>
+
+            <p class="text-[10px] text-slate-500 mt-2">Advertisements support free game development</p>
+        </div>
+    </div>
+
+    <!-- 7. REWARDED VIDEO AD MODAL (Watch Ad for +2 Hints or Continue) -->
+    <div id="modal-ad-rewarded" class="fixed inset-0 z-[130] hidden flex items-center justify-center bg-black/90 backdrop-blur-md p-4 transition-all duration-300">
+        <div class="glass-modal w-full max-w-md rounded-3xl p-6 text-center shadow-2xl relative border border-amber-500/30">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+                <span class="text-[10px] uppercase font-bold tracking-widest bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded">Rewarded Ad</span>
+                <span id="rewarded-timer" class="text-xs font-mono font-bold text-amber-400">Watching: 5s remaining</span>
+            </div>
+
+            <!-- Simulated Video Creative Player -->
+            <div class="w-full aspect-video rounded-2xl bg-slate-950 border border-slate-800 flex flex-col items-center justify-center p-4 relative overflow-hidden mb-4">
+                <div class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-2xl mb-2 animate-bounce">
+                    🎁
+                </div>
+                <p class="text-sm font-bold text-white mb-1">Earning +2 Free Hints!</p>
+                <p class="text-xs text-slate-400">Keep this window open to receive your reward.</p>
+
+                <!-- Video Progress Bar -->
+                <div class="absolute bottom-0 left-0 right-0 h-1.5 bg-slate-800">
+                    <div id="rewarded-progress-bar" class="h-full bg-gradient-to-r from-amber-400 to-rose-500 w-0 transition-all duration-1000 ease-linear"></div>
+                </div>
+            </div>
+
+            <button id="btn-claim-reward" disabled class="btn-glow w-full py-3 rounded-xl bg-slate-800 text-slate-500 font-bold uppercase tracking-wider text-sm transition-all cursor-not-allowed">
+                Watching Sponsor Message...
+            </button>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script src="script.js"></script>
+</body>
+</html>
