@@ -8,9 +8,9 @@
    ========================================================================== */
 const AD_CONFIG = {
     // Replace with your real Google AdSense Publisher ID: e.g. "ca-pub-1234567890123456"
-    publisherId: "ca-pub-XXXXXXXXXXXXXXXX",
+    publisherId: "ca-pub-3239558856675714",
     // Test mode simulates responsive ad units & video rewarded flow cleanly
-    testMode: true,
+    testMode: false,
     // Google AdSense / Ad Manager slot identifiers
     slots: {
         homeBanner: "1001001001",
