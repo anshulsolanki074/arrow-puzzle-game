@@ -89,13 +89,13 @@
       "19": 20,
       "20": 21
     },
-    "lastPlayedLevel": 3,
+    "lastPlayedLevel": 4,
     "totalHints": 0,
     "settings": {
       "sound": true,
       "music": true,
       "haptics": true
     },
-    "updatedAt": 1793711319772
+    "updatedAt": 1793724102582
   }
 }
